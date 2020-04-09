@@ -1,25 +1,67 @@
 import React, { Component } from "react";
-import $ from "jquery";
+import MicRecorder from "mic-recorder-to-mp3";
+
+const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
 class Chatbot extends Component {
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      isRecording: false,
+      blobURL: "",
+      isBlocked: false,
+    };
   }
 
   componentDidMount() {
-    $.ajax({
-      url: `https://api.landbot.io/v`,
-      Authorization: "Token 20889e7afb06e0946b806b2a0a90a9bb0b9c5981",
-      Type: "application/json",
-      success: (data) => {
-        console.log(data);
+    navigator.getUserMedia(
+      { audio: true },
+      () => {
+        console.log("Permission Granted");
+        this.setState({ isBlocked: false });
       },
-    });
+      () => {
+        console.log("Permission Denied");
+        this.setState({ isBlocked: true });
+      }
+    );
   }
 
+  start = () => {
+    if (this.state.isBlocked) {
+      console.log("Permission Denied");
+    } else {
+      Mp3Recorder.start()
+        .then(() => {
+          this.setState({ isRecording: true });
+        })
+        .catch((e) => console.error(e));
+    }
+  };
+
+  stop = () => {
+    Mp3Recorder.stop()
+      .getMp3()
+      .then(([buffer, blob]) => {
+        const blobURL = URL.createObjectURL(blob);
+        this.setState({ blobURL, isRecording: false });
+      })
+      .catch((e) => console.log(e));
+    console.log(this.state);
+  };
+
   render() {
-    return <React.Fragment></React.Fragment>;
+    return (
+      <React.Fragment>
+        <button onClick={this.start} disabled={this.state.isRecording}>
+          Record
+        </button>
+        <button onClick={this.stop} disabled={!this.state.isRecording}>
+          Stop
+        </button>
+        <audio src={this.state.blobURL} controls="controls" />
+      </React.Fragment>
+    );
   }
 }
 
